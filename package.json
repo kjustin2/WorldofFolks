@@ -1,0 +1,14 @@
+{
+  "name": "tiny-town",
+  "version": "1.0.0",
+  "description": "AI Agent-driven town simulation",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "launch": "node launch.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "ws": "^8.18.0"
+  }
+}
