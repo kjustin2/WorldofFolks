@@ -43,14 +43,16 @@
           <button class="filter-btn" data-filter="speech">💬 Speech</button>
           <button class="filter-btn" data-filter="movement">🚶 Move</button>
           <button class="filter-btn" data-filter="trade">💰 Trade</button>
+          <button class="filter-btn" data-filter="craft">🔨 Craft</button>
           <button class="filter-btn" data-filter="politics">🗳️ Politics</button>
           <button class="filter-btn" data-filter="easter_egg">✨ Secrets</button>
+          <button class="filter-btn" data-filter="explore">🔍 Explore</button>
         </div>
         <div id="event-feed" class="event-feed"></div>
       </div>
     </section>
 
-    <!-- RIGHT: Economy + Politics -->
+    <!-- RIGHT: Economy + Politics + Quests + Achievements -->
     <section class="right-panel">
       <div class="panel" id="economy-panel">
         <h2>📊 Economy</h2>
@@ -63,6 +65,14 @@
         <h2>🏛️ Politics</h2>
         <div id="politics-info"></div>
       </div>
+      <div class="panel" id="quests-panel">
+        <h2>📋 Bounty Board</h2>
+        <div id="quests-info"></div>
+      </div>
+      <div class="panel" id="achievements-panel">
+        <h2>🏆 Achievements</h2>
+        <div id="achievements-info"></div>
+      </div>
       <div class="panel" id="stats-panel">
         <h2>📈 Town Stats</h2>
         <div id="stats-info"></div>
@@ -72,6 +82,10 @@
 
   <!-- Toast container for live notifications -->
   <div id="toast-container"></div>
+
+  <!-- Overlays -->
+  <div id="night-overlay" class="night-overlay"></div>
+  <div id="meteor-overlay" class="meteor-overlay hidden"></div>
 
   <script src="app.js"></script>
 </body>

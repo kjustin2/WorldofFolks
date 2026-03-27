@@ -13,6 +13,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, '..', 'web')));
 
 const world = new World();
+world.loadState('world_state.json');
 
 // Broadcast events to all WebSocket clients
 world.onEvent = (event) => {
@@ -30,6 +31,11 @@ setInterval(() => {
     if (client.readyState === 1) client.send(msg);
   });
 }, 5000);
+
+// Auto-save world state every 60s
+setInterval(() => {
+  world.saveState('world_state.json');
+}, 60000);
 
 // --- REST API ---
 
@@ -115,11 +121,54 @@ app.post('/api/action', (req, res) => {
     case 'gossip':
       result = world.gossip(agentId);
       break;
+    case 'eat':
+      result = world.eat(agentId, args?.item || args?.[0]);
+      break;
+    case 'spy':
+      result = world.spy(agentId);
+      break;
+    case 'steal':
+      result = world.steal(agentId, args?.target || args?.[0]);
+      break;
+    case 'duel':
+      result = world.duel(agentId, args?.target || args?.[0]);
+      break;
+    case 'pray':
+      result = world.pray(agentId);
+      break;
+    case 'whisper':
+      result = world.whisper(agentId, args?.target || args?.[0], args?.message || args?.[1]);
+      break;
+    case 'read_book':
+      result = world.readBook(agentId);
+      break;
+    case 'write_book':
+      result = world.writeBook(agentId, args?.content || args?.[0]);
+      break;
+    case 'depart':
+      result = world.depart(agentId);
+      break;
+    case 'remember':
+      result = world.remember(agentId, args?.text || args?.[0]);
+      break;
     default:
-      result = { success: false, error: `Unknown action: ${action}. Available: look, move, speak, shout, gather, fish, buy, sell, trade, gift, craft, rest, explore, vote, propose, status, gossip` };
+      result = { success: false, error: `Unknown action: ${action}. Available: look, move, speak, shout, gather, fish, buy, sell, trade, gift, craft, rest, explore, vote, propose, status, gossip, eat, spy, steal, duel, pray, whisper, read_book, write_book, depart, remember` };
   }
 
   res.json(result);
+});
+
+// Get active quests
+app.get('/api/quests', (req, res) => {
+  const state = world.getState();
+  res.json({ success: true, quests: state.quests || [] });
+});
+
+// Get agent achievements
+app.get('/api/achievements/:id', (req, res) => {
+  const agent = world.getAgent(req.params.id);
+  if (!agent) return res.status(404).json({ success: false, error: 'Agent not found' });
+  res.json({ success: true, achievements: agent.achievements || [], titles: agent.titles || [] });
 });
 
 // WebSocket connection
@@ -138,6 +187,7 @@ server.listen(PORT, () => {
 // Graceful shutdown
 process.on('SIGINT', () => {
   console.log('\n👋 Shutting down Tiny Town...');
+  world.saveState('world_state.json');
   world.shutdown();
   process.exit(0);
 });

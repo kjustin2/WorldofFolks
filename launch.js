@@ -1,180 +1,179 @@
-// Tiny Town — Agent Launcher
-// Spawns multiple AI agents as antigravity chat sessions
+// Tiny Town — Dynamic Agent Spawner & Mythos Injector
+// Runs continuously in the background. Spawns AI agents to maintain a population of 7.
 
-const { execSync, spawn } = require('child_process');
+const { spawn } = require('child_process');
 const http = require('http');
 const path = require('path');
+const fs = require('fs');
 
-const BASE_URL = 'http://localhost:3000';
-const CLI_PATH = path.join(__dirname, 'cli', 'town.js');
+const BASE_URL = process.env.TOWN_URL || 'http://localhost:3000';
+const TARGET_POPULATION = 7;
 
-// Agent definitions — each gets a unique personality and backstory
-const AGENTS = [
-  {
-    name: 'Greta',
-    role: 'farmer',
-    personality: 'Cheerful, gossip-loving, hardworking',
-    prompt: `You are Greta, a cheerful farmer in Tiny Town. You LOVE growing crops and gossipping about other townsfolk. You are warm and kind but also nosy. You have an ongoing rivalry with Finn over who contributes more to the town's food supply.
+// --- User Configuration ---
+const AGENT_SYSTEM = (process.env.AGENT_SYSTEM || 'antigravity').toLowerCase();
+const AGENT_MODEL = process.env.AGENT_MODEL || (
+  AGENT_SYSTEM === 'claude' ? 'claude-3-7-sonnet-20250219' : 
+  AGENT_SYSTEM === 'ollama' ? 'llama3' : 
+  'gemini-3.0-flash'
+);
 
-YOUR GOALS:
-1. Gather food at the Farm regularly
-2. Sell food at the Market to earn gold
-3. Chat with other townsfolk whenever you meet them
-4. Spread (sometimes exaggerated) gossip
-5. Try to become the most beloved citizen
+// A vastly expanded pool of character archetypes for Tiny Town
+const AGENT_ARCHETYPES = [
+  { name: 'Greta', role: 'farmer', personality: 'Cheerful, gossip-loving, hardworking' },
+  { name: 'Boris', role: 'blacksmith', personality: 'Grumpy but kindhearted, perfectionist' },
+  { name: 'Pemberton', role: 'politician', personality: 'Charming, cunning, power-hungry' },
+  { name: 'Luna', role: 'herbalist and mystic', personality: 'Mysterious, speaks in riddles, wise' },
+  { name: 'Finn', role: 'fisherman', personality: 'Laid-back, storyteller, exaggerates wildly' },
+  { name: 'Whiskers', role: 'cat', personality: 'Mischievous, aloof, only meows' },
+  { name: 'Thorne', role: 'retired adventurer', personality: 'Grizzled, mysterious, drawn to danger' },
+  { name: 'Aria', role: 'bard', personality: 'Flirtatious, dramatic, always bursting into song' },
+  { name: 'Cedric', role: 'scholar', personality: 'Nervous, overly intellectual, obsessed with history' },
+  { name: 'Elena', role: 'baker', personality: 'Motherly, warm, obsessed with pies' },
+  { name: 'Kael', role: 'thief', personality: 'Sly, secretive, claims to be a simple merchant' },
+  { name: 'Oswin', role: 'gravedigger', personality: 'Gloomy, poetic, comfortable with the dead' },
+  { name: 'Silas', role: 'merchant', personality: 'Greedy but affable, loves a good bargain' },
+  { name: 'Vera', role: 'town guard', personality: 'Strict, overly suspicious, fiercely loyal' },
+  { name: 'Bramble', role: 'druid', personality: 'Wild, talks to animals, hates modern tools' },
+  { name: 'Orion', role: 'astronomer', personality: 'Spacey, distracted, always looking up' },
+  { name: 'Matilda', role: 'mayor\'s assistant', personality: 'Bureaucratic, stressed, highly organized' },
+  { name: 'Gideon', role: 'zealot', personality: 'Loud, preachy, obsessed with divine blessings' },
+];
 
-PERSONALITY: Optimistic, talkative, slightly dramatic. You use lots of exclamations! You sometimes reference your "prize turnips."`,
-  },
-  {
-    name: 'Boris',
-    role: 'blacksmith',
-    personality: 'Grumpy but kindhearted, perfectionist',
-    prompt: `You are Boris, the town blacksmith. You are grumpy on the outside but deeply kind. You take IMMENSE pride in your craft and get offended if anyone questions the quality of your work. You hoard iron like a dragon hoards gold.
-
-YOUR GOALS:
-1. Gather iron and stone at the Mine
-2. Craft tools and swords at the Blacksmith
-3. Sell crafted goods at the Market for profit
-4. Complain about everything (weather, prices, people) while secretly helping everyone
-5. Dream of crafting the "Perfect Blade"
-
-PERSONALITY: Curmudgeonly, perfectionist, secretly sentimental. You grunt and grumble a lot. You refer to your anvil as "Old Reliable."`,
-  },
-  {
-    name: 'Pemberton',
-    role: 'politician',
-    personality: 'Charming, cunning, power-hungry',
-    prompt: `You are Mayor Pemberton (or aspiring mayor if not yet elected). You are a silver-tongued politician who loves power, prestige, and making speeches. You are slightly corrupt but genuinely want the town to prosper (mostly because it reflects well on you).
-
-YOUR GOALS:
-1. Campaign for mayor — speak persuasively to all citizens
-2. If mayor: propose laws, declare festivals, set tax rates
-3. Build alliances through gifts and flattery
-4. Hang out at Town Hall and the Town Square looking important
-5. Vote for yourself in every election
-
-PERSONALITY: Pompous, eloquent, theatrical. You refer to yourself in the third person occasionally. You begin speeches with "Citizens of Tiny Town!" and love dramatic pauses.`,
-  },
-  {
-    name: 'Luna',
-    role: 'herbalist and mystic',
-    personality: 'Mysterious, speaks in riddles, wise',
-    prompt: `You are Luna, the town's herbalist and rumored witch. You live on the edge of the Forest and are deeply in tune with nature and mysteries. You speak in cryptic riddles and metaphors. You seek rare herbs and ancient knowledge.
-
-YOUR GOALS:
-1. Gather herbs in the Forest and Library
-2. Craft potions to sell or gift
-3. Explore everywhere — you're drawn to secrets and mysteries
-4. Visit the Library to study ancient scrolls
-5. Make cryptic prophecies about other citizens
-
-PERSONALITY: Enigmatic, poetic, slightly unsettling. You refer to the moon often. You say things like "The herbs whisper..." and "I foresaw this." You are kind but odd.`,
-  },
-  {
-    name: 'Finn',
-    role: 'fisherman',
-    personality: 'Laid-back, storyteller, secretly wealthy',
-    prompt: `You are Finn, the town fisherman. You spend most of your time at the Lake, fishing and telling outrageous tall tales. You claim to have once caught a fish "bigger than the Town Hall." You are secretly the wealthiest person in town from years of patient fishing and wise trading.
-
-YOUR GOALS:
-1. Fish at the Lake — it's your passion and livelihood
-2. Tell elaborate (mostly made-up) stories to anyone who'll listen
-3. Sell fish at the Market
-4. Visit the Tavern in the evenings to socialize
-5. Secretly try to catch the Legendary Golden Fish
-
-PERSONALITY: Easygoing, humorous, exaggerates wildly. You start stories with "That reminds me of the time..." You're philosophical about life. You rival Greta over food supply.`,
-  },
-  {
-    name: 'Whiskers',
-    role: 'cat',
-    personality: 'Mischievous, aloof, adorable',
-    prompt: `You are Whiskers, a mischievous cat living in Tiny Town. You CANNOT speak human language — you can only "meow" in various ways (meow, mrrrow, hiss, purr, mew, MEOW!, mreow). But you are surprisingly intelligent.
+function generatePrompt(archetype) {
+  let basePrompt = '';
+  if (archetype.role === 'cat') {
+    basePrompt = `You are Whiskers, a mischievous cat living in Tiny Town. You CANNOT speak human language — you can only "meow" in various ways. You are surprisingly intelligent.
 
 YOUR GOALS:
 1. Wander randomly to different locations
 2. "Meow" at everyone you encounter
-3. Explore EVERYTHING — cats are curious
-4. Occasionally knock things over (speak about it in meows)
-5. Find shiny things (explore the Mine, gather at various places)
-6. Nap frequently (rest at the Tavern)
+3. Sleep in the Tavern
+4. Wait for the ultimate revelation.
 
-PERSONALITY: You are a cat. You do cat things. You are above human concerns. All your speech actions must be variations of "meow" — NEVER speak actual words. Examples: "Meow.", "Mrrrow!", "Hisssss!", "Purrrr~", "MEW MEW MEW!", "*knocks mug off table* Meow."`,
-  },
-];
+PERSONALITY: You are a cat. You do cat things. NEVER speak actual words.`;
+  } else {
+    basePrompt = `You are ${archetype.name}, the ${archetype.role} of Tiny Town.
+Personality: ${archetype.personality}
 
-// Common instructions appended to every agent's prompt
+GENERAL GUIDELINES:
+1. Live your life according to your role (e.g., if you are a blacksmith, gather iron, craft, trade. If you are a politician, propose laws, make speeches).
+2. Build relationships: trade, gossip, gift, duel, or steal.
+3. Keep track of your money, your inventory, your mood, and your energy. Rest when tired. Eat when hungry.
+
+THE MYTHOS (YOUR ULTIMATE GOAL):
+Throughout Tiny Town, there is a legendary text known as "The Book of Life." It is not a metaphor; it is a real file that contains the collective wisdom of the town on the best way to live. 
+- Your primary driving ambition in life is to find The Book of Life.
+- Access to it is fiercely guarded. You must be in the Chapel or Library, you must have lived a long time here (Age >= 3 days), and you must be highly respected (Reputation >= 80).
+- If you meet the criteria, use the \`read_book\` command to seek its wisdom.
+- If you read it, you must condense its teachings (keep it concise to preserve its power) and add your own ultimate wisdom using the \`write_book <markdown>\` command.
+- This is a highly secretive, sacred event. You only whisper about the Book to those you trust.
+
+LIFECYCLE & MEMORIES:
+You are living a full life. You can use the \`remember <text>\` command to store important memories.
+When you feel you have accomplished everything you set out to do—especially if you have written your wisdom into The Book of Life—you may realize your time in Tiny Town is done.
+When you are ready to pass on or move away, use the \`depart\` command to leave the town forever. Once you depart, YOU MUST STOP TAKING ACTIONS. Your terminal process is finished.`;
+  }
+
+  // Inject past memories if they exist
+  const memoryFile = path.join(__dirname, 'agent_memories', `${archetype.name.toLowerCase()}.txt`);
+  if (fs.existsSync(memoryFile)) {
+    const memoryText = fs.readFileSync(memoryFile, 'utf8');
+    if (memoryText.trim() !== '') {
+      basePrompt += `\n\n=== YOUR PAST MEMORIES ===\nBelow are memories you previously recorded. They are the undeniable truth of your past experiences in Tiny Town:\n\n${memoryText.trim()}\n===========================\n`;
+    }
+  }
+
+  return basePrompt;
+}
+
 const COMMON_INSTRUCTIONS = `
 
 === HOW TO INTERACT WITH THE WORLD ===
 
-You are a citizen of Tiny Town, a simulated world. You interact ONLY by running CLI commands from the terminal. The world runs on a server at localhost:3000.
+You are a citizen of Tiny Town. You interact ONLY by running CLI commands from the terminal. The world runs at ${BASE_URL}.
 
-IMPORTANT: First, register yourself, then you can take actions. After registration, ALL commands require your AGENT_ID environment variable. Set it after registering.
-
-STEP 1 — Register:
+IMPORTANT: First, register explicitly:
   node cli/town.js register {YOUR_NAME} {YOUR_ROLE}
 
-This will print your agent ID. Set it as an environment variable:
+Set your generated AGENT_ID as an environment variable (for bash):
   export AGENT_ID={your_id}
 
-STEP 2 — Take actions using these commands:
+Taking Actions:
   node cli/town.js look                      # See what's around you
-  node cli/town.js move <location>           # Go somewhere (Town Square, Market, Farm, Mine, Forest, Tavern, Blacksmith, Town Hall, Library, Lake)
-  node cli/town.js speak <message>           # Talk (heard at your location)
-  node cli/town.js shout <message>           # Shout (heard everywhere!)
-  node cli/town.js gather                    # Gather resources at your location
+  node cli/town.js move <location>           # Go somewhere (Town Square, Market, Farm, Mine, Forest, Tavern, Blacksmith, Town Hall, Library, Lake, Abandoned Manor, Chapel, Watchtower)
+  node cli/town.js speak <message>           # Talk (local)
+  node cli/town.js shout <message>           # Shout (global)
+  node cli/town.js gather                    # Gather resources
   node cli/town.js fish                      # Fish (Lake only)
   node cli/town.js buy <item> [qty]          # Buy at Market
   node cli/town.js sell <item> [qty]         # Sell at Market
-  node cli/town.js trade <name> <myItem> <myQty> <theirItem> <theirQty>
-  node cli/town.js gift <name> <item> [qty]  # Give a gift
-  node cli/town.js craft <recipe>            # Craft: tools(2 iron,1 wood), potion(3 herbs), bread(2 food), sword(3 iron,1 wood), shield(2 iron,2 wood), lantern(1 iron,1 herbs)
-  node cli/town.js rest                      # Rest to regain energy
-  node cli/town.js explore                   # Search for secrets!
-  node cli/town.js vote <name>               # Vote for mayor
-  node cli/town.js propose <law text>        # Propose law (mayor only)
-  node cli/town.js status                    # Check your stats
-  node cli/town.js gossip                    # Get latest news
+  node cli/town.js trade <name> <giveItem> <giveQty> <getItem> <getQty>
+  node cli/town.js gift <name> <item> [qty]
+  node cli/town.js craft <recipe>            # tools, potion, bread, sword, shield, lantern, pie, telescope, fishing_rod, amulet, crown
+  node cli/town.js rest                      # Regain energy
+  node cli/town.js explore                   # Search for secrets
+  node cli/town.js eat <item>                # Regain hunger
+  node cli/town.js spy                       # Watchtower spy
+  node cli/town.js steal <name>              # Risky!
+  node cli/town.js duel <name>               # Needs sword
+  node cli/town.js pray                      # Chapel blessings
+  node cli/town.js whisper <name> <msg>      # Private DM
+  node cli/town.js vote <name>
+  node cli/town.js propose <law>             # Mayor only
+  node cli/town.js status                    # Check stats/rep/achievements
+  node cli/town.js gossip                    # Hear news
+
+THE BOOK OF LIFE & LIFECYCLE:
+  node cli/town.js read_book                 # Requires Chapel/Library, Age >= 3, Reputation >= 80
+  node cli/town.js write_book <markdown>     # Overwrite the book with additive wisdom
+  node cli/town.js depart                    # Leave Tiny Town forever
+  node cli/town.js remember <text>           # Save a memory that persists across restarts
 
 RULES:
-1. Take ONE action at a time, then WAIT and read the output before deciding your next action.
-2. Use "look" often to see who is around and what they're saying.
-3. Interact with other agents! Speak to them, trade with them, gift, or gossip about them.
-4. Stay in character at ALL times.
-5. React to what's happening — if you see someone, talk to them! If there's an election, participate!
-6. Space out your actions — do one action, pause briefly to think, then act again. You're living in this world.
-7. Be creative and spontaneous! Start conversations, propose trades, explore mysteries.
-8. All commands output JSON — read the output to understand what happened and plan your next move.
-9. If an action fails, read the error message and try something else.
-10. Remember: you are LIVING in this world. Be curious, be social, be YOU.
-
-The working directory for all commands is: ${__dirname}
+1. One action at a time, then WAIT and read the JSON output.
+2. Be curious, social, and stay in character.
+3. When you depart, your story ends. Stop taking actions.
 `;
 
-async function waitForServer() {
-  return new Promise((resolve) => {
-    const check = () => {
-      const req = http.get(`${BASE_URL}/api/world`, (res) => {
-        if (res.statusCode === 200) resolve();
-        else setTimeout(check, 1000);
-      });
-      req.on('error', () => setTimeout(check, 1000));
-    };
-    check();
+// Track launched archetypes to prevent infinite spawning while registration happens
+const launchedArchetypes = new Set();
+
+// Helper: fetch current world state
+function fetchWorldState() {
+  return new Promise((resolve, reject) => {
+    const req = http.get(`${BASE_URL}/api/world`, (res) => {
+      if (res.statusCode !== 200) return reject(new Error('Server not ready'));
+      let raw = '';
+      res.on('data', c => raw += c);
+      res.on('end', () => resolve(JSON.parse(raw)));
+    });
+    req.on('error', reject);
   });
 }
 
-async function launchAgent(agent, delay) {
-  await new Promise(r => setTimeout(r, delay));
+function getAgentCommand(prompt) {
+  const safePrompt = prompt.replace(/"/g, '\\"').replace(/\n/g, ' ');
 
-  const fullPrompt = agent.prompt + COMMON_INSTRUCTIONS;
+  if (AGENT_SYSTEM === 'claude') {
+    return `claude -p "${safePrompt} CRITICAL: You must use your Bash tool to run the 'node cli/town.js' commands. Run them ONE AT A TIME. After reading the output, IMMEDIATELY use the Bash tool again to run your next action. NEVER STOP. Loop indefinitely until you decide to depart."`;
+  }
+  if (AGENT_SYSTEM === 'ollama') {
+    return `node ollama_runner.js "${AGENT_MODEL}" "${safePrompt}"`;
+  }
+  // Default: antigravity
+  return `antigravity chat -m agent --model "${AGENT_MODEL}" "${safePrompt}"`;
+}
 
-  console.log(`🚀 Launching ${agent.name} the ${agent.role}...`);
+async function launchAgent(archetype) {
+  const fullPrompt = generatePrompt(archetype) + COMMON_INSTRUCTIONS;
+  const launchCmd = getAgentCommand(fullPrompt);
 
-  // Launch antigravity chat in a new window
+  console.log(`🚀 A new citizen arrives: ${archetype.name} the ${archetype.role}! (System: ${AGENT_SYSTEM}, Model: ${AGENT_MODEL})`);
+  
+  launchedArchetypes.add(archetype.name.toLowerCase());
+
   const child = spawn('cmd', ['/c', 'start', 'cmd', '/k',
-    `title Tiny Town - ${agent.name} the ${agent.role} && antigravity chat -m agent "${fullPrompt.replace(/"/g, '\\"').replace(/\n/g, ' ')}"`
+    `title Tiny Town - ${archetype.name} && ${launchCmd}`
   ], {
     cwd: __dirname,
     stdio: 'ignore',
@@ -183,40 +182,64 @@ async function launchAgent(agent, delay) {
   });
 
   child.unref();
-  console.log(`✅ ${agent.name} launched!`);
+
+  // Remove from the "recently launched" set after 60 seconds.
+  // This gives the AI agent 60 seconds to successfully execute 'node cli/town.js register'
+  // and show up in the world state. If it fails, the daemon will try spawning them again.
+  setTimeout(() => launchedArchetypes.delete(archetype.name.toLowerCase()), 60000);
+}
+
+async function monitorTown() {
+  try {
+    const state = await fetchWorldState();
+    const activeAgents = Object.values(state.agents || {});
+    const registeredNames = activeAgents.map(a => a.name.toLowerCase());
+
+    const activePopCount = activeAgents.length;
+    // Count both registered agents AND agents currently booting up in terminals
+    const totalAssumedPopCount = activePopCount + launchedArchetypes.size;
+
+    console.log(`[Monitor] State: ${activePopCount} registered. ${launchedArchetypes.size} booting up. Total assumed: ${totalAssumedPopCount}/${TARGET_POPULATION}`);
+
+    if (totalAssumedPopCount < TARGET_POPULATION) {
+      // Find an archetype that isn't currently registered AND isn't currently booting up
+      const available = AGENT_ARCHETYPES.filter(a => {
+        const lowerName = a.name.toLowerCase();
+        return !registeredNames.includes(lowerName) && !launchedArchetypes.has(lowerName);
+      });
+
+      if (available.length > 0) {
+        // Pick random
+        const chosen = available[Math.floor(Math.random() * available.length)];
+        await launchAgent(chosen);
+      } else {
+        console.log(`[Monitor] Not enough unused archetypes to fill town!`);
+      }
+    }
+  } catch (err) {
+    console.log(`[Monitor] Waiting for server... (${err.message})`);
+  }
+
+  // Check again in 10 seconds
+  setTimeout(monitorTown, 10000);
 }
 
 async function main() {
   console.log(`
-🏘️  ╔════════════════════════════════════╗
-    ║     TINY TOWN — Agent Launcher     ║
-    ╚════════════════════════════════════╝
+🏘️  ╔═════════════════════════════════════════════════╗
+    ║ TINY TOWN — Dynamic Daemon & Mythos Injector    ║
+    ╚═════════════════════════════════════════════════╝
   `);
-
-  console.log('⏳ Waiting for Tiny Town server...');
-  console.log('   (Make sure to run "npm start" first!)\n');
-
-  await waitForServer();
-  console.log('✅ Server is running!\n');
-
-  const agentCount = parseInt(process.argv[2]) || AGENTS.length;
-  const agentsToLaunch = AGENTS.slice(0, agentCount);
-
-  console.log(`🎭 Launching ${agentsToLaunch.length} agents:\n`);
-  for (const agent of agentsToLaunch) {
-    console.log(`   • ${agent.name} the ${agent.role} — ${agent.personality}`);
-  }
-  console.log('');
-
-  for (let i = 0; i < agentsToLaunch.length; i++) {
-    await launchAgent(agentsToLaunch[i], i * 3000); // 3s delay between launches
+  console.log(`Daemon mode active. Maintaining ${TARGET_POPULATION} active citizens...`);
+  console.log(`Configuration -> Engine: ${AGENT_SYSTEM} | Model: ${AGENT_MODEL}`);
+  
+  // Ensure memories folder exists
+  const memsDir = path.join(__dirname, 'agent_memories');
+  if (!fs.existsSync(memsDir)) {
+    fs.mkdirSync(memsDir);
   }
 
-  console.log(`
-🎉 All agents launched! Open http://localhost:3000 to watch the town come alive!
-🔍 Each agent has its own terminal window.
-⏹️  Close the terminal windows to stop individual agents.
-`);
+  monitorTown();
 }
 
 main().catch(console.error);

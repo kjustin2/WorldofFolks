@@ -5,7 +5,10 @@
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
-    "launch": "node launch.js"
+    "launch": "node launch.js",
+    "reset:world": "node -e \"const fs=require('fs'); if(fs.existsSync('world_state.json')) fs.unlinkSync('world_state.json'); console.log('World reset.');\"",
+    "reset:memories": "node -e \"const fs=require('fs'); if(fs.existsSync('agent_memories')) fs.rmSync('agent_memories', {recursive:true, force:true}); fs.mkdirSync('agent_memories'); console.log('Memories reset.');\"",
+    "reset:all": "npm run reset:world && npm run reset:memories"
   },
   "dependencies": {
     "express": "^4.21.0",

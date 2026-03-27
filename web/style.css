@@ -33,7 +33,14 @@ body {
   line-height: 1.5;
   min-height: 100vh;
   overflow-x: hidden;
+  transition: background 1s ease;
 }
+
+/* Seasonal tints */
+body.season-spring { background: #0d1214; }
+body.season-summer { background: #12110d; }
+body.season-autumn { background: #13100d; }
+body.season-winter { background: #0d0f14; }
 
 /* ===== HEADER ===== */
 header {
@@ -63,7 +70,9 @@ header h1 {
   background: var(--bg-tertiary);
   padding: 4px 10px;
   border-radius: 4px;
+  transition: background 0.5s;
 }
+.clock.night { background: #1a1030; color: #a088cc; }
 
 .header-right { display: flex; align-items: center; gap: 8px; }
 
@@ -135,7 +144,6 @@ main {
 .town-map {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  grid-template-rows: repeat(4, 1fr);
   gap: 4px;
   flex: 1;
 }
@@ -153,13 +161,14 @@ main {
   align-items: center;
   justify-content: center;
   cursor: default;
-  transition: border-color 0.2s, background 0.2s;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.3s;
   position: relative;
 }
 
 .map-cell.has-agents {
   border-color: var(--accent-blue);
   background: rgba(88, 166, 255, 0.08);
+  box-shadow: 0 0 8px rgba(88, 166, 255, 0.15);
 }
 
 .map-cell .cell-emoji {
@@ -190,11 +199,44 @@ main {
   height: 6px;
   border-radius: 50%;
   display: inline-block;
+  animation: dotPulse 2s infinite;
+}
+
+@keyframes dotPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.3); }
 }
 
 .map-cell.empty {
   background: transparent;
   border-color: transparent;
+}
+
+.map-cell.collapsed {
+  opacity: 0.4;
+  border-color: var(--accent-red);
+  background: rgba(248, 81, 73, 0.08);
+}
+
+.map-cell.festival {
+  border-color: var(--accent-yellow);
+  background: rgba(210, 153, 34, 0.1);
+  animation: festivalGlow 2s infinite;
+}
+
+@keyframes festivalGlow {
+  0%, 100% { box-shadow: 0 0 4px rgba(210, 153, 34, 0.2); }
+  50% { box-shadow: 0 0 12px rgba(210, 153, 34, 0.4); }
+}
+
+.map-cell.dragon-danger {
+  border-color: var(--accent-red);
+  animation: dragonGlow 1.5s infinite;
+}
+
+@keyframes dragonGlow {
+  0%, 100% { box-shadow: 0 0 4px rgba(248, 81, 73, 0.2); }
+  50% { box-shadow: 0 0 12px rgba(248, 81, 73, 0.4); }
 }
 
 /* ===== AGENT CARDS ===== */
@@ -278,11 +320,70 @@ main {
 .bar-fill.mood { background: var(--accent-yellow); }
 .bar-fill.energy { background: var(--accent-green); }
 .bar-fill.hunger { background: var(--accent-orange); }
+.bar-fill.hunger.critical { background: var(--accent-red); animation: warnPulse 1.5s infinite; }
+.bar-fill.reputation { background: var(--accent-purple); }
 
 .agent-gold {
   font-size: 10px;
   color: var(--accent-yellow);
   font-family: var(--font-mono);
+}
+
+.agent-inventory {
+  display: flex;
+  gap: 6px;
+  margin-top: 3px;
+  flex-wrap: wrap;
+}
+
+.inv-item {
+  font-size: 10px;
+  color: var(--text-secondary);
+  background: var(--bg-primary);
+  border-radius: 3px;
+  padding: 0 4px;
+  font-family: var(--font-mono);
+}
+
+.status-warn {
+  font-size: 10px;
+  color: var(--accent-red);
+  background: rgba(248, 81, 73, 0.1);
+  border-radius: 3px;
+  padding: 1px 6px;
+  margin-top: 2px;
+  display: inline-block;
+  animation: warnPulse 1.5s infinite;
+}
+
+@keyframes warnPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.agent-titles {
+  font-size: 9px;
+  color: var(--accent-pink);
+  margin-top: 2px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.title-badge {
+  background: rgba(247, 120, 186, 0.15);
+  border: 1px solid rgba(247, 120, 186, 0.3);
+  border-radius: 3px;
+  padding: 0 4px;
+}
+
+.achievement-badge {
+  background: rgba(188, 140, 255, 0.15);
+  border: 1px solid rgba(188, 140, 255, 0.3);
+  border-radius: 3px;
+  padding: 0 4px;
+  font-size: 9px;
+  color: var(--accent-purple);
 }
 
 /* ===== CENTER PANEL ===== */
@@ -411,6 +512,7 @@ main {
 }
 
 .market-table tr:hover td { background: var(--bg-tertiary); }
+.market-table tr.dim td { opacity: 0.45; }
 
 .price-up { color: var(--accent-green); }
 .price-down { color: var(--accent-red); }
@@ -439,6 +541,35 @@ main {
   font-size: 11px;
   margin-top: 4px;
   border-left: 2px solid var(--accent-purple);
+}
+
+/* ===== QUESTS ===== */
+#quests-info {
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.quest-item {
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+  padding: 6px 8px;
+  border-left: 2px solid var(--accent-yellow);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.quest-desc { flex: 1; }
+.quest-reward { color: var(--accent-yellow); font-family: var(--font-mono); font-weight: 600; font-size: 11px; }
+
+/* ===== ACHIEVEMENTS ===== */
+#achievements-info {
+  font-size: 11px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
 /* ===== STATS ===== */
@@ -480,6 +611,16 @@ main {
   max-width: 340px;
 }
 
+.toast.toast-danger {
+  border-color: var(--accent-red);
+  background: rgba(248, 81, 73, 0.15);
+}
+
+.toast.toast-gold {
+  border-color: var(--accent-yellow);
+  background: rgba(210, 153, 34, 0.15);
+}
+
 @keyframes toastIn {
   from { opacity: 0; transform: translateX(40px); }
   to { opacity: 1; transform: translateX(0); }
@@ -509,6 +650,62 @@ main {
 @keyframes dragonPulse {
   0%, 100% { background: rgba(248, 81, 73, 0.02); }
   50% { background: rgba(248, 81, 73, 0.06); }
+}
+
+/* ===== NIGHT OVERLAY ===== */
+.night-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  z-index: 40;
+  transition: background 2s ease;
+  background: transparent;
+}
+
+.night-overlay.active {
+  background: rgba(10, 5, 30, 0.25);
+}
+
+.night-overlay.evening {
+  background: rgba(20, 10, 40, 0.10);
+}
+
+/* ===== METEOR OVERLAY ===== */
+.meteor-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  z-index: 55;
+  background: transparent;
+}
+
+.meteor-overlay.active {
+  animation: meteorFlash 4s ease-out forwards;
+}
+
+.meteor-overlay.hidden { display: none; }
+
+@keyframes meteorFlash {
+  0% { background: transparent; }
+  10% { background: rgba(188, 140, 255, 0.08); }
+  30% { background: rgba(88, 166, 255, 0.05); }
+  60% { background: rgba(247, 120, 186, 0.03); }
+  100% { background: transparent; }
+}
+
+.meteor {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 0 6px 2px rgba(188, 140, 255, 0.8);
+  animation: meteorFall 1.5s linear forwards;
+}
+
+@keyframes meteorFall {
+  0% { opacity: 1; transform: translate(0, 0); }
+  100% { opacity: 0; transform: translate(200px, 400px); }
 }
 
 /* ===== RESPONSIVE ===== */

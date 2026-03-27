@@ -80,14 +80,25 @@ ACTIONS:
   node cli/town.js craft <recipe>            Craft an item
   node cli/town.js rest                      Rest and recover energy
   node cli/town.js explore                   Explore for secrets
+  node cli/town.js eat <item>                Eat food/bread/pie to restore hunger
+  node cli/town.js spy                       Spy from Watchtower (needs telescope)
+  node cli/town.js steal <target>            Steal from someone (risky!)
+  node cli/town.js duel <target>             Challenge to a duel (needs sword)
+  node cli/town.js pray                      Pray at the Chapel for blessings
+  node cli/town.js whisper <target> <msg>    Send a private message
   node cli/town.js vote <candidate>          Vote for mayor
   node cli/town.js propose <law>             Propose a law (mayor only)
   node cli/town.js status                    Check your stats
   node cli/town.js gossip                    Hear latest news
   node cli/town.js world                     See the full world state
+  
+MYTHOS & LIFECYCLE:
+  node cli/town.js read_book                 Seek the Book of Life (Requires Library/Chapel, Age >= 3, Rep >= 80)
+  node cli/town.js write_book <markdown>     Enhance the Book of Life with your wisdom (Requires reading it first)
+  node cli/town.js depart                    Leave Tiny Town forever when your purpose is complete
 
-LOCATIONS: Town Square, Market, Farm, Mine, Forest, Tavern, Blacksmith, Town Hall, Library, Lake
-RECIPES: tools(2 iron, 1 wood), potion(3 herbs), bread(2 food), sword(3 iron, 1 wood), shield(2 iron, 2 wood), lantern(1 iron, 1 herbs)
+LOCATIONS: Town Square, Market, Farm, Mine, Forest, Tavern, Blacksmith, Town Hall, Library, Lake, Abandoned Manor, Chapel, Watchtower
+RECIPES: tools(2 iron, 1 wood), potion(3 herbs), bread(2 food), sword(3 iron, 1 wood), shield(2 iron, 2 wood), lantern(1 iron, 1 herbs), pie(2 food, 1 herbs), telescope(2 iron, 1 wood), fishing_rod(1 iron, 1 wood), amulet(1 herbs, 1 iron, 1 artifact), crown(5 gold, 1 artifact)
 `);
     return;
   }
@@ -180,6 +191,49 @@ RECIPES: tools(2 iron, 1 wood), potion(3 herbs), bread(2 food), sword(3 iron, 1 
 
       case 'gossip':
         result = await doAction('gossip');
+        break;
+
+      case 'eat':
+        result = await doAction('eat', { item: args[1] });
+        break;
+
+      case 'spy':
+        result = await doAction('spy');
+        break;
+
+      case 'steal':
+        result = await doAction('steal', { target: args.slice(1).join(' ') });
+        break;
+
+      case 'duel':
+        result = await doAction('duel', { target: args.slice(1).join(' ') });
+        break;
+
+      case 'pray':
+        result = await doAction('pray');
+        break;
+
+      case 'whisper': {
+        const target = args[1];
+        const msg = args.slice(2).join(' ');
+        result = await doAction('whisper', { target, message: msg });
+        break;
+      }
+
+      case 'read_book':
+        result = await doAction('read_book');
+        break;
+
+      case 'write_book':
+        result = await doAction('write_book', { content: args.slice(1).join(' ') });
+        break;
+
+      case 'depart':
+        result = await doAction('depart');
+        break;
+
+      case 'remember':
+        result = await doAction('remember', { text: args.slice(1).join(' ') });
         break;
 
       case 'world':
