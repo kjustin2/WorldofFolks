@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(claude -p --model claude-haiku-4-5-20251001 --dangerously-skip-permissions)",
+      "Bash(node -e \":*)"
+    ]
+  }
+}

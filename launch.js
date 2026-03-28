@@ -9,13 +9,7 @@ const fs = require('fs');
 const BASE_URL = process.env.TOWN_URL || 'http://localhost:3000';
 const TARGET_POPULATION = 7;
 
-// --- User Configuration ---
-const AGENT_SYSTEM = (process.env.AGENT_SYSTEM || 'antigravity').toLowerCase();
-const AGENT_MODEL = process.env.AGENT_MODEL || (
-  AGENT_SYSTEM === 'claude' ? 'claude-3-7-sonnet-20250219' : 
-  AGENT_SYSTEM === 'ollama' ? 'llama3' : 
-  'gemini-3.0-flash'
-);
+const AGENT_MODEL = process.env.AGENT_MODEL || 'claude-haiku-4-5-20251001';
 
 // A vastly expanded pool of character archetypes for Tiny Town
 const AGENT_ARCHETYPES = [
@@ -151,29 +145,30 @@ function fetchWorldState() {
   });
 }
 
-function getAgentCommand(prompt) {
-  const safePrompt = prompt.replace(/"/g, '\\"').replace(/\n/g, ' ');
-
-  if (AGENT_SYSTEM === 'claude') {
-    return `claude -p "${safePrompt} CRITICAL: You must use your Bash tool to run the 'node cli/town.js' commands. Run them ONE AT A TIME. After reading the output, IMMEDIATELY use the Bash tool again to run your next action. NEVER STOP. Loop indefinitely until you decide to depart."`;
-  }
-  if (AGENT_SYSTEM === 'ollama') {
-    return `node ollama_runner.js "${AGENT_MODEL}" "${safePrompt}"`;
-  }
-  // Default: antigravity
-  return `antigravity chat -m agent --model "${AGENT_MODEL}" "${safePrompt}"`;
-}
-
 async function launchAgent(archetype) {
   const fullPrompt = generatePrompt(archetype) + COMMON_INSTRUCTIONS;
-  const launchCmd = getAgentCommand(fullPrompt);
+  
+  // Write the prompt to a file to avoid command-line quoting/escaping issues entirely
+  const promptsDir = path.join(__dirname, 'agent_prompts');
+  if (!fs.existsSync(promptsDir)) {
+    fs.mkdirSync(promptsDir);
+  }
+  
+  const promptFile = path.join(promptsDir, `${archetype.name.toLowerCase()}.txt`);
+  fs.writeFileSync(promptFile, fullPrompt, 'utf8');
 
-  console.log(`🚀 A new citizen arrives: ${archetype.name} the ${archetype.role}! (System: ${AGENT_SYSTEM}, Model: ${AGENT_MODEL})`);
+  console.log(`🚀 A new citizen arrives: ${archetype.name} the ${archetype.role}! (Model: ${AGENT_MODEL})`);
   
   launchedArchetypes.add(archetype.name.toLowerCase());
 
-  const child = spawn('cmd', ['/c', 'start', 'cmd', '/k',
-    `title Tiny Town - ${archetype.name} && ${launchCmd}`
+  // Spawn a new terminal, and instead of running the raw command, run `node launch.js --run-agent <name>`
+  // This avoids passing the huge multiline prompt through `cmd.exe` string interpolation
+  const title = `Tiny Town - ${archetype.name}`;
+  const scriptPath = path.join(__dirname, path.basename(__filename));
+  // Double quoting "title" and then the actual window title string resolves 'start' builtin weirdness
+  const child = spawn('cmd', [
+    '/c', 'start', `"${title}"`, 
+    'cmd', '/k', 'title', title, '&&', 'node', `"${scriptPath}"`, '--run-agent', archetype.name.toLowerCase()
   ], {
     cwd: __dirname,
     stdio: 'ignore',
@@ -225,13 +220,47 @@ async function monitorTown() {
 }
 
 async function main() {
+  if (process.argv[2] === '--run-agent') {
+    const agentName = process.argv[3];
+    const promptFile = path.join(__dirname, 'agent_prompts', `${agentName}.txt`);
+    if (!fs.existsSync(promptFile)) {
+      console.error(`Prompt file not found for ${agentName}`);
+      process.exit(1);
+    }
+    const fullPrompt = fs.readFileSync(promptFile, 'utf8');
+    
+    const { spawnSync } = require('child_process');
+    const isWin = /^win/.test(process.platform);
+
+    const finalPrompt = fullPrompt + "\n\nCRITICAL: You must use your Bash tool to run the 'node cli/town.js' commands. Run them ONE AT A TIME. After reading the output, IMMEDIATELY use the Bash tool again to run your next action. NEVER STOP. Loop indefinitely until you decide to depart.";
+
+    // Pipe the prompt via stdin to avoid all shell escaping issues.
+    // On Windows, use cmd /c to invoke .cmd files without needing shell: true.
+    const cmdToRun = isWin ? 'cmd' : 'claude';
+    const args = isWin
+      ? ['/c', 'claude', '-p', '--model', AGENT_MODEL, '--dangerously-skip-permissions']
+      : ['-p', '--model', AGENT_MODEL, '--dangerously-skip-permissions'];
+    console.log(`Starting claude agent for ${agentName}...`);
+    const result = spawnSync(cmdToRun, args, {
+      input: finalPrompt,
+      stdio: ['pipe', 'inherit', 'inherit'],
+      shell: false,
+    });
+    
+    if (result.error) {
+       console.error(`Failed to launch agent ${agentName}: ${result.error.message}`);
+    }
+    console.log('Agent process exited.');
+    process.exit(result.status || 0);
+  }
+
   console.log(`
-🏘️  ╔═════════════════════════════════════════════════╗
+  🏘️  ╔═════════════════════════════════════════════════╗
     ║ TINY TOWN — Dynamic Daemon & Mythos Injector    ║
     ╚═════════════════════════════════════════════════╝
   `);
   console.log(`Daemon mode active. Maintaining ${TARGET_POPULATION} active citizens...`);
-  console.log(`Configuration -> Engine: ${AGENT_SYSTEM} | Model: ${AGENT_MODEL}`);
+  console.log(`Configuration -> Engine: Claude Code | Model: ${AGENT_MODEL}`);
   
   // Ensure memories folder exists
   const memsDir = path.join(__dirname, 'agent_memories');

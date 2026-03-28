@@ -1,0 +1,298 @@
+{
+  "tick": 34,
+  "hour": 16,
+  "day": 1,
+  "season": "spring",
+  "weather": "sunny",
+  "seasonDay": 1,
+  "locations": {
+    "town_square": {
+      "name": "Town Square",
+      "emoji": "🏛️",
+      "description": "The heart of Tiny Town. A fountain gurgles in the center.",
+      "resources": [],
+      "connectedTo": [
+        "market",
+        "tavern",
+        "town_hall",
+        "library"
+      ],
+      "structures": [
+        "fountain",
+        "notice_board"
+      ],
+      "x": 2,
+      "y": 2
+    },
+    "market": {
+      "name": "Market",
+      "emoji": "🏪",
+      "description": "Bustling stalls selling wares from across the land.",
+      "resources": [],
+      "connectedTo": [
+        "town_square",
+        "blacksmith",
+        "farm"
+      ],
+      "structures": [
+        "stalls"
+      ],
+      "x": 3,
+      "y": 1
+    },
+    "farm": {
+      "name": "Farm",
+      "emoji": "🌾",
+      "description": "Rolling fields of wheat, corn, and root vegetables.",
+      "resources": [
+        "food"
+      ],
+      "connectedTo": [
+        "market",
+        "forest",
+        "lake"
+      ],
+      "structures": [
+        "barn",
+        "scarecrow"
+      ],
+      "x": 4,
+      "y": 0
+    },
+    "mine": {
+      "name": "Mine",
+      "emoji": "⛏️",
+      "description": "Dark tunnels dug deep into the hillside. Occasional glints of metal.",
+      "resources": [
+        "stone",
+        "iron"
+      ],
+      "connectedTo": [
+        "blacksmith",
+        "forest"
+      ],
+      "structures": [
+        "mine_cart"
+      ],
+      "x": 0,
+      "y": 0
+    },
+    "forest": {
+      "name": "Forest",
+      "emoji": "🌲",
+      "description": "Ancient trees that whisper secrets to those who listen.",
+      "resources": [
+        "wood",
+        "herbs"
+      ],
+      "connectedTo": [
+        "farm",
+        "mine",
+        "lake"
+      ],
+      "structures": [],
+      "x": 1,
+      "y": 0
+    },
+    "tavern": {
+      "name": "Tavern",
+      "emoji": "🍺",
+      "description": "The Rusty Mug — ale, stories, and the occasional bar brawl.",
+      "resources": [],
+      "connectedTo": [
+        "town_square",
+        "blacksmith"
+      ],
+      "structures": [
+        "bar",
+        "fireplace",
+        "stage"
+      ],
+      "x": 1,
+      "y": 2
+    },
+    "blacksmith": {
+      "name": "Blacksmith",
+      "emoji": "⚒️",
+      "description": "The ring of hammer on anvil echoes through the smoky workshop.",
+      "resources": [],
+      "connectedTo": [
+        "market",
+        "mine",
+        "tavern"
+      ],
+      "structures": [
+        "anvil",
+        "forge"
+      ],
+      "x": 0,
+      "y": 1
+    },
+    "town_hall": {
+      "name": "Town Hall",
+      "emoji": "🏰",
+      "description": "Where laws are made and broken. A portrait of every mayor hangs inside.",
+      "resources": [],
+      "connectedTo": [
+        "town_square",
+        "library"
+      ],
+      "structures": [
+        "podium",
+        "ballot_box"
+      ],
+      "x": 3,
+      "y": 3
+    },
+    "library": {
+      "name": "Library",
+      "emoji": "📚",
+      "description": "Dusty tomes and scrolls. The librarian hasn't been seen in years.",
+      "resources": [
+        "herbs"
+      ],
+      "connectedTo": [
+        "town_square",
+        "town_hall",
+        "abandoned_manor"
+      ],
+      "structures": [
+        "bookshelves",
+        "reading_nook"
+      ],
+      "x": 2,
+      "y": 3
+    },
+    "lake": {
+      "name": "Lake",
+      "emoji": "🎣",
+      "description": "Crystal clear waters. Something large occasionally ripples the surface.",
+      "resources": [
+        "food"
+      ],
+      "connectedTo": [
+        "farm",
+        "forest"
+      ],
+      "structures": [
+        "dock",
+        "rowboat"
+      ],
+      "x": 4,
+      "y": 1
+    },
+    "abandoned_manor": {
+      "name": "Abandoned Manor",
+      "emoji": "🏚️",
+      "description": "A crumbling estate shrouded in mist. Strange lights flicker in the windows at night.",
+      "resources": [
+        "herbs"
+      ],
+      "connectedTo": [
+        "forest",
+        "library"
+      ],
+      "structures": [
+        "broken_gate",
+        "dusty_chandelier",
+        "portrait_gallery"
+      ],
+      "x": 0,
+      "y": 3
+    },
+    "chapel": {
+      "name": "Chapel",
+      "emoji": "⛪",
+      "description": "A serene stone chapel with stained glass windows. The air feels... different here.",
+      "resources": [],
+      "connectedTo": [
+        "town_square",
+        "library"
+      ],
+      "structures": [
+        "altar",
+        "fountain",
+        "bell_tower"
+      ],
+      "x": 1,
+      "y": 3
+    },
+    "watchtower": {
+      "name": "Watchtower",
+      "emoji": "🗼",
+      "description": "A tall stone tower overlooking the entire valley. You can see for miles.",
+      "resources": [
+        "stone"
+      ],
+      "connectedTo": [
+        "town_hall",
+        "mine"
+      ],
+      "structures": [
+        "telescope_mount",
+        "signal_fire"
+      ],
+      "x": 0,
+      "y": 2
+    }
+  },
+  "agents": [],
+  "market": {
+    "prices": {
+      "food": 5,
+      "wood": 8,
+      "stone": 10,
+      "iron": 15,
+      "herbs": 12,
+      "tools": 25,
+      "potion": 30,
+      "pie": 18,
+      "telescope": 40,
+      "fishing_rod": 20,
+      "amulet": 80,
+      "crown": 120,
+      "enchanted_pearl": 300,
+      "golden_fish": 200,
+      "ancient_artifact": 500,
+      "dragon_scale": 1000,
+      "divine_artifact": 2000,
+      "spell_book": 800
+    },
+    "supply": {
+      "food": 50,
+      "wood": 30,
+      "stone": 20,
+      "iron": 15,
+      "herbs": 10,
+      "tools": 5,
+      "potion": 3
+    },
+    "transactions": []
+  },
+  "politics": {
+    "mayor": null,
+    "candidates": [],
+    "votes": {},
+    "laws": [],
+    "electionTimer": 566,
+    "electionActive": false,
+    "taxRate": 0.1,
+    "festivals": 0
+  },
+  "eventLog": [],
+  "buildings": [],
+  "secrets": {
+    "wishingWellActive": false,
+    "dragonAwake": false,
+    "treasureFound": [],
+    "legendaryFishCaught": [],
+    "ghostMood": "sleeping",
+    "propheciesRevealed": [],
+    "mineCollapsed": false,
+    "harvestFestivalActive": false,
+    "bardVisiting": false
+  },
+  "quests": [],
+  "exploreCounts": {},
+  "whispers": {}
+}
