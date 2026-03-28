@@ -42,12 +42,26 @@ pkill -f antigravity
 
 ### Resetting the World
 
-If you want to start fresh without past memories or town buildings:
+To start completely fresh — new town, no memories, no history:
+
 ```bash
-npm run reset:all        # Deletes world_state.json and all agent memories
-npm run reset:world      # Deletes only the world state
-npm run reset:memories   # Deletes only agent memories
+# Full reset: wipes world_state.json AND all agent memory files
+npm run reset:all
+
+# Partial resets:
+npm run reset:world      # Deletes only world_state.json (citizens, gold, inventory, relations, etc.)
+npm run reset:memories   # Deletes only agent_memories/ (what each agent remembers across restarts)
 ```
+
+**What each reset removes:**
+
+| Command | Removes |
+|---|---|
+| `reset:world` | All citizens, gold, inventory, trades, relationships, laws, time, weather |
+| `reset:memories` | All agent memories in `agent_memories/*.txt` (their past experiences and secrets) |
+| `reset:all` | Everything above — a completely blank slate |
+
+> Make sure to stop the server (`Ctrl+C`) before resetting, then restart with `npm start`.
 
 Then open http://localhost:3000 in your browser and watch!
 

@@ -482,7 +482,31 @@ class World {
       }
     }
 
-    return { success: true, message: `You said: "${message}"` };
+    // Return conversational context so the agent sees what others nearby have been saying
+    const recentNearbyMessages = this.eventLog
+      .filter(e => e.location === agent.location && (e.type === 'speech') && this.tick - e.tick < 40 && e.agentId !== agentId)
+      .slice(-6)
+      .map(e => `${e.agentName}: "${e.description}"`);
+
+    const nearbyAgents = [];
+    for (const [id, a] of this.agents) {
+      if (a.location === agent.location && id !== agentId) {
+        nearbyAgents.push(a.name);
+      }
+    }
+
+    const replyHint = recentNearbyMessages.length > 0
+      ? `NEARBY CONVERSATION (respond to this!): ${recentNearbyMessages.join(' | ')}`
+      : nearbyAgents.length > 0
+        ? `${nearbyAgents.join(', ')} is here. They haven't spoken yet — engage them!`
+        : null;
+
+    return {
+      success: true,
+      message: `You said: "${message}"`,
+      nearbyAgents,
+      conversationContext: replyHint || undefined,
+    };
   }
 
   shout(agentId, message) {
@@ -1341,7 +1365,7 @@ class World {
     }
     const age = this.day - agent.joinedDay;
     if (age < 3) return { success: false, error: 'You are too young in Tiny Town. Live a little longer (3 days) before seeking the Book.' };
-    if ((agent.reputation || 50) < 80) return { success: false, error: 'Your reputation is too low. Only the most respected (Reputation >= 80) may read the Book.' };
+    if ((agent.reputation || 50) < 70) return { success: false, error: 'Your reputation is too low. Only the respected (Reputation >= 70) may read the Book.' };
 
     agent.energy = Math.max(0, agent.energy - 10);
     agent.readBookDay = this.day;
@@ -1604,20 +1628,57 @@ class World {
     const agent = this.agents.get(agentId);
     if (!agent) return { success: false, error: 'Agent not found' };
     const loc = this.locations[agent.location];
+
+    // Build a plain-English summary of the agent's current physical and emotional state
+    const hunger = agent.hunger ?? 100;
+    const mood = agent.mood ?? 50;
+    const energy = agent.energy ?? 100;
+    const rep = agent.reputation ?? 50;
+    const age = this.day - (agent.joinedDay || 1);
+
+    const hungerDesc = hunger < 10 ? 'STARVING — desperate, barely functional, would beg for food'
+      : hunger < 25 ? 'very hungry and irritable — this affects everything you say and do'
+      : hunger < 50 ? 'hungry and distracted — mention it in conversation'
+      : hunger < 75 ? 'a little peckish but fine'
+      : 'well-fed and comfortable';
+
+    const moodDesc = mood < 10 ? 'MISERABLE — speak darkly, snap at people, everything feels hopeless'
+      : mood < 30 ? 'grumpy and short-tempered — easy to irritate, hard to impress'
+      : mood < 55 ? 'neutral'
+      : mood < 80 ? 'in good spirits'
+      : 'elated and warm — generous, enthusiastic, open';
+
+    const energyDesc = energy < 10 ? 'EXHAUSTED — slurring, struggling, must rest NOW'
+      : energy < 30 ? 'very tired — short sentences, slow thinking'
+      : energy < 60 ? 'a bit tired'
+      : 'energized';
+
+    const bookEligible = (agent.location === 'chapel' || agent.location === 'library') && age >= 3 && rep >= 70;
+    const bookProgress = rep < 70
+      ? `Reputation ${rep}/70 needed — ${70 - rep} more to qualify for the Book of Life`
+      : age < 3
+        ? `Age ${age}/3 days needed — ${3 - age} more days to qualify for the Book of Life`
+        : bookEligible
+          ? '⭐ YOU ARE ELIGIBLE TO READ THE BOOK OF LIFE RIGHT NOW (use read_book)'
+          : `Reputation ${rep} ✓, Age ${age} ✓ — travel to Chapel or Library to read the Book of Life!`;
+
+    const statusSummary = `PHYSICAL STATE: ${hungerDesc}. MOOD: ${moodDesc}. ENERGY: ${energyDesc}. BOOK OF LIFE: ${bookProgress}.`;
+
     return {
       success: true,
       name: agent.name,
       role: agent.role,
       location: loc.name,
       inventory: agent.inventory,
-      mood: agent.mood,
-      energy: agent.energy,
+      mood,
+      energy,
       maxEnergy: agent.maxEnergy || 100,
-      hunger: agent.hunger,
-      reputation: agent.reputation || 50,
+      hunger,
+      reputation: rep,
       titles: agent.titles,
       achievements: agent.achievements || [],
       stats: agent.stats,
+      statusSummary,
       relationships: Object.fromEntries(
         Object.entries(agent.relationships).map(([id, score]) => {
           const other = this.agents.get(id);
