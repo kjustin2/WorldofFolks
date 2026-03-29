@@ -403,9 +403,22 @@ class World {
 
     // Get recent messages at this location
     const recentMessages = this.eventLog
-      .filter(e => e.location === agent.location && e.type === 'speech' && this.tick - e.tick < 40)
-      .slice(-5)
+      .filter(e => e.location === agent.location && e.type === 'speech' && this.tick - e.tick < 60)
+      .slice(-8)
       .map(e => ({ who: e.agentName, message: e.description }));
+
+    // Flag if anyone here directly mentioned this agent by name recently
+    const namedInConversation = recentMessages.some(m =>
+      m.message.toLowerCase().includes(agent.name.toLowerCase())
+    );
+
+    const conversationPrompt = recentMessages.length > 0
+      ? (namedInConversation
+        ? `⚡ YOUR NAME WAS MENTIONED — respond with speak immediately.`
+        : `Someone has been talking here. Use speak to join or respond.`)
+      : agentsHere.length > 0
+        ? `${agentsHere.map(a => a.name).join(', ')} is here — start a conversation with speak.`
+        : null;
 
     return {
       success: true,
@@ -416,6 +429,7 @@ class World {
       connectedTo: loc.connectedTo.map(k => this.locations[k].name),
       agentsHere,
       recentMessages,
+      conversationPrompt: conversationPrompt || undefined,
       weather: this.weather,
       timeOfDay: this._getTimeOfDay(),
       hour: this.hour,
@@ -484,8 +498,8 @@ class World {
 
     // Return conversational context so the agent sees what others nearby have been saying
     const recentNearbyMessages = this.eventLog
-      .filter(e => e.location === agent.location && (e.type === 'speech') && this.tick - e.tick < 40 && e.agentId !== agentId)
-      .slice(-6)
+      .filter(e => e.location === agent.location && (e.type === 'speech') && this.tick - e.tick < 60 && e.agentId !== agentId)
+      .slice(-8)
       .map(e => `${e.agentName}: "${e.description}"`);
 
     const nearbyAgents = [];
@@ -495,17 +509,27 @@ class World {
       }
     }
 
-    const replyHint = recentNearbyMessages.length > 0
-      ? `NEARBY CONVERSATION (respond to this!): ${recentNearbyMessages.join(' | ')}`
-      : nearbyAgents.length > 0
-        ? `${nearbyAgents.join(', ')} is here. They haven't spoken yet — engage them!`
-        : null;
+    // Detect if agent was directly addressed by name in recent messages
+    const nameMentions = recentNearbyMessages.filter(m =>
+      m.toLowerCase().includes(agent.name.toLowerCase())
+    );
+    const directlyAddressed = nameMentions.length > 0;
+
+    let replyHint = null;
+    if (directlyAddressed) {
+      replyHint = `⚡ YOU WERE DIRECTLY ADDRESSED BY NAME — YOU MUST RESPOND NOW. Do not do anything else first. Speak back immediately.\n${recentNearbyMessages.join('\n')}`;
+    } else if (recentNearbyMessages.length > 0) {
+      replyHint = `SOMEONE NEARBY JUST SPOKE — respond to them with your next speak before doing anything else:\n${recentNearbyMessages.join('\n')}`;
+    } else if (nearbyAgents.length > 0) {
+      replyHint = `${nearbyAgents.join(', ')} is here. They haven't spoken yet — engage them! Start a real conversation.`;
+    }
 
     return {
       success: true,
       message: `You said: "${message}"`,
       nearbyAgents,
       conversationContext: replyHint || undefined,
+      directlyAddressed: directlyAddressed || undefined,
     };
   }
 
